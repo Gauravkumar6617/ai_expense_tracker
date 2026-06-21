@@ -1,10 +1,15 @@
 import express from "express";
 import cors from "cors";
-import pool from "./db.js";
 import dotenv from "dotenv";
 import swaggerUi from "swagger-ui-express";
-import swaggerJsdoc from "swagger-jsdoc";
+import { readFileSync } from "fs";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
 import authRoutes from "./routes/authRoutes.js";
+import categoryRoutes from "./routes/categoryRoutes.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const app = express();
 dotenv.config();
@@ -13,42 +18,18 @@ app.use(cors());
 app.use(express.json());
 const port = process.env.PORT || 8000;
 
-// Swagger auto-generated config
-const swaggerOptions = {
-  definition: {
-    openapi: "3.0.3",
-    info: {
-      title: "AI Expense Tracker API",
-      description: "API documentation for the AI Expense Tracker application",
-      version: "1.0.0",
-    },
-    servers: [
-      {
-        url: `http://localhost:${port}`,
-        description: "Local development server",
-      },
-    ],
-    components: {
-      securitySchemes: {
-        BearerAuth: {
-          type: "http",
-          scheme: "bearer",
-          bearerFormat: "JWT",
-        },
-      },
-    },
-  },
-  apis: ["./routes/*.js"], // Path to files with JSDoc comments
-};
-
-const swaggerSpec = swaggerJsdoc(swaggerOptions);
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+// Load auto-generated swagger spec
+const swaggerFile = JSON.parse(
+  readFileSync(join(__dirname, "swagger-output.json"), "utf-8")
+);
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerFile));
 
 app.get("/", (req, res) => {
   res.send("Hello World!");
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/categories", categoryRoutes);
 
 app.listen(port, () => {
   console.log(`App listening on port ${port}`);
