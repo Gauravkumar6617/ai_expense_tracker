@@ -7,6 +7,8 @@ import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import authRoutes from "./routes/authRoutes.js";
 import categoryRoutes from "./routes/categoryRoutes.js";
+import transactionRoutes from "./routes/transcationRouter.js";
+import budgetRoutes from "./routes/budgetRoutes.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -20,7 +22,7 @@ const port = process.env.PORT || 8000;
 
 // Load auto-generated swagger spec
 const swaggerFile = JSON.parse(
-  readFileSync(join(__dirname, "swagger-output.json"), "utf-8")
+  readFileSync(join(__dirname, "swagger-output.json"), "utf-8"),
 );
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerFile));
 
@@ -30,6 +32,8 @@ app.get("/", (req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/categories", categoryRoutes);
+app.use("/api/transactions", transactionRoutes);
+app.use("/api/budgets", budgetRoutes);
 
 app.listen(port, () => {
   console.log(`App listening on port ${port}`);

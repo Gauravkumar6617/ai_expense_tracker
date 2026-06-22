@@ -1,60 +1,58 @@
 import pool from "../db.js";
 
 export const getTransactions = async (req, res) => {
-    const {
-        startDate,
-        endDate,
-        categoryId,
-        type,
-        search,
-        limit = 50,
-        offset = 0,
-    } = req.query;
+  const {
+    startDate,
+    endDate,
+    categoryId,
+    type,
+    search,
+    limit = 50,
+    offset = 0,
+  } = req.query;
 
-    const conditions = ["t.userId = $1"];
-    const values = [req.userId];
+  const conditions = ["t.userId = $1"];
+  const values = [req.userId];
 
-    let idx = 2;
+  let idx = 2;
 
-    // Filter by start date
-    if (startDate) {
-        conditions.push(`t.transactions_date >= $${idx++}`);
-        values.push(startDate);
-    }
+  // Filter by start date
+  if (startDate) {
+    conditions.push(`t.transactions_date >= $${idx++}`);
+    values.push(startDate);
+  }
 
-    // Filter by end date
-    if (endDate) {
-        conditions.push(`t.transactions_date <= $${idx++}`);
-        values.push(endDate);
-    }
+  // Filter by end date
+  if (endDate) {
+    conditions.push(`t.transactions_date <= $${idx++}`);
+    values.push(endDate);
+  }
 
-    // Filter by category
-    if (categoryId) {
-        conditions.push(`t.category_id = $${idx++}`);
-        values.push(categoryId);
-    }
+  // Filter by category
+  if (categoryId) {
+    conditions.push(`t.category_id = $${idx++}`);
+    values.push(categoryId);
+  }
 
-    // Filter by transaction type
-    if (type) {
-        conditions.push(`t.type = $${idx++}`);
-        values.push(type);
-    }
+  // Filter by transaction type
+  if (type) {
+    conditions.push(`t.type = $${idx++}`);
+    values.push(type);
+  }
 
-    // Search in description or notes
-    if (search) {
-        conditions.push(
-            `(t.description ILIKE $${idx} OR t.notes ILIKE $${idx})`
-        );
-        values.push(`%${search}%`);
-        idx++;
-    }
+  // Search in description or notes
+  if (search) {
+    conditions.push(`(t.description ILIKE $${idx} OR t.notes ILIKE $${idx})`);
+    values.push(`%${search}%`);
+    idx++;
+  }
 
-    // Pagination
-    values.push(Number(limit));
-    values.push(Number(offset));
+  // Pagination
+  values.push(Number(limit));
+  values.push(Number(offset));
 
-    try {
-        const query = `
+  try {
+    const query = `
       SELECT
         t.*,
         c.name AS category_name,
@@ -69,46 +67,51 @@ export const getTransactions = async (req, res) => {
       OFFSET $${idx}
     `;
 
-        const result = await pool.query(query, values);
+    const result = await pool.query(query, values);
 
-        res.status(200).json(result.rows);
-    } catch (error) {
-        console.error("Error while getting transaction data:", error);
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error("Error while getting transaction data:", error);
 
-        res.status(500).json({
-            message: "Error while getting transaction details",
-        });
-    }
+    res.status(500).json({
+      message: "Error while getting transaction details",
+    });
+  }
 };
 
-
 export const createTranscation = async (req, res) => {
+  const { category_id, amount, type, description, notes, transactions_date } =
+    req.body;
 
-    const { category_id, amount, type, description, notes, transactions_date } = req.body;
+  if (!amount || !type || !transactions_date) {
+    return res
+      .status(400)
+      .json({ message: "Amount & Type & Transcation Date is required " });
+  }
+  if (type !== "expense" && type !== "income") {
+    return res.status(400).json({ message: "type of expense is requried" });
+  }
 
-    if (!amount || !type || !transactions_date) {
-        return res.status(400).json({ "message": "Amount & Type & Transcation Date is required " })
-    }
-    if (type !== 'expense' && type !== 'income') {
-        return res.status(400).json({ "message": "type of expense is requried" })
-    }
+  try {
+    const result = await pool.query(
+      `INSERT INTO transactions user_id ,category_id ,amount , type ,description , notes ,  transactions_date VALUES ($1 , $2 , $3 , $4 ,$5 ,$6 ,$7) RETURNING * ,[req.userId ,category_id || null ,amount , type  ,description || null , notes || null ,transactions_date ] `,
+    );
+    req.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.log("error while creating transcation", error);
+    return res
+      .status(500)
+      .json({
+        message: "Error while cretaing a transcation.Please try again later.",
+      });
+  }
+};
 
-    try {
-        const result = await pool.query(
-            `INSERT INTO transactions user_id ,category_id ,amount , type ,description , notes ,  transactions_date VALUES ($1 , $2 , $3 , $4 ,$5 ,$6 ,$7) RETURNING * ,[req.userId ,category_id || null ,amount , type  ,description || null , notes || null ,transactions_date ] `
-        );
-        req.status(201).json(result.rows[0]);
-    } catch (error) {
-        console.log("error while creating transcation" ,error)
-        return res.status(500).json({"message":"Error while cretaing a transcation.Please try again later."})
-    }
-}
-
-export const getTranscatioById = async(req, res) => {
-    const {id} = req.params;
-     try {
-        const result = await pool.query(
-            `SELECT t.* ,
+export const getTranscatioById = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query(
+      `SELECT t.* ,
             c.name AS category_name,
             c.icon AS category_icon,
             c.color AS category_color
@@ -116,38 +119,53 @@ export const getTranscatioById = async(req, res) => {
              LEFT JOIN categories  c ON.category_id = c.id WHERE t.id 
              WHERE t.id = $1 AND t.userId = $2,
         [id,req.userId]
-            `
-        );
-         if (result.rows.length ==0){
-            res.status(400).json({"message":"no data found"})
-         }
+            `,
+    );
+    if (result.rows.length == 0) {
+      res.status(400).json({ message: "no data found" });
+    }
 
-         return res.json(result.rows[0]);
+    return res.json(result.rows[0]);
+  } catch (error) {
+    console.log("error while creating transcation", error);
+    return res
+      .status(500)
+      .json({
+        message: "Error while cretaing a transcation.Please try again later.",
+      });
+  }
+};
 
+export const updateTranscation = async (req, res) => {
+  const { id } = req.params;
+  const { categoryId, amount, type, transactionsDate, note, description } =
+    req.body;
 
-     } catch (error) {
-        console.log("error while creating transcation" ,error)
-        return res.status(500).json({"message":"Error while cretaing a transcation.Please try again later."})
-     }
-
-}
-
-
-export const updateTranscation = async (req , res) =>{
-const {id } = req.params;
-const {categoryId ,amount,type ,transactionsDate,note ,description} = req.body
-
-try{
+  try {
     const result = await pool.query(
-        ` UPDATE transactions SET category_id = COALESCE ($1,category_id),
+      ` UPDATE transactions SET category_id = COALESCE ($1,category_id),
           amount = COALESCE ($2, amount),
-          notes =  COALESCE ($3 , notes)
+          notes =  COALESCE ($3 , notes),
+            description = COALESCE ($4 , description),
+            transactions_date = COALESCE ($5 , transactions_date),
+            type = COALESCE ($6 , type)
+            WHERE id = $7 AND userId = $8 RETURNING *,
+            [categoryId,amount,note,description,transactionsDate,type,id,req.userId]
 
-        `
-    )
-}
-catch{
 
-}
+        `,
+    );
+    if (result.rows.length == 0) {
+      res.status(400).json({ message: "no data found" });
+    }
 
-}
+    return res.json(result.rows[0]);
+  } catch {
+    console.log("error while updating transcation", error);
+    return res
+      .status(500)
+      .json({
+        message: "Error while updating a transcation.Please try again later.",
+      });
+  }
+};
