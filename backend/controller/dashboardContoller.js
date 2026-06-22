@@ -1,4 +1,5 @@
 import pool from "../db.js";
+import { getCategory } from "./categoryController.js";
 
 const pctChange = (current, previous) => {
   if (previous === 0) {
@@ -48,5 +49,59 @@ FROM monthly
       income_change: pctChange(income_this_month, income_last_month),
       expense_change: pctChange(expense_this_month, expense_last_month),
     });
-  } catch (error) {}
+  } catch (error) {
+    console.error("Error fetching budget summary:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+const getCategoryBreakdown = async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT
+                c.id AS category_id,
+                c.name AS category_name,
+                c.icon AS category_icon,
+                c.color AS category_color,
+                SUM(t.amount) AS total,
+                COUNT(t.id) AS transaction_count
+            FROM transactions t
+            JOIN categories c ON c.id = t.category_id
+            WHERE t.user_id = $1
+              AND t.type = 'expense'
+              AND t.transaction_date >= date_trunc('month', CURRENT_DATE)
+            GROUP BY c.id
+            ORDER BY total DESC`,
+      [req.userId], // Fixed: Placed correctly inside the query parentheses
+    );
+
+    // Send the data back to the frontend
+    return res.json(result.rows);
+  } catch (error) {
+    console.error("getCategoryBreakdown error:", error);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+export default getCategoryBreakdown;
+
+export const getMonthlySummary = async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT
+    to_char(date_trunc('month', transaction_date), 'YYYY-MM') AS month,
+    SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) AS income,
+    SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) AS expense
+FROM transactions
+WHERE user_id = $1
+  AND transaction_date >= date_trunc('month', CURRENT_DATE) - INTERVAL '5 months'
+GROUP BY 1
+ORDER BY 1`,
+      [req.userId],
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error("getMonthlySummary error:", error);
+    return res.status(500).json({ message: "Server error" });
+  }
 };
