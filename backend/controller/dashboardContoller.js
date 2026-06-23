@@ -11,43 +11,49 @@ const pctChange = (current, previous) => {
 const getBudgetSummary = async (req, res) => {
   try {
     const result = await pool.query(
-      `
-      WITH monthly AS (
-    SELECT
-        date_trunc('month', transaction_date) AS month,
-        type,
-        SUM(amount) AS total
-    FROM transactions
-    WHERE user_id = $1
-      AND transaction_date >= date_trunc('month', CURRENT_DATE) - INTERVAL '1 month'
-    GROUP BY 1, 2
-)
-SELECT
-    COALESCE(SUM(CASE WHEN month = date_trunc('month', CURRENT_DATE) AND type = 'income' THEN total END), 0) AS income_this_month,
-    COALESCE(SUM(CASE WHEN month = date_trunc('month', CURRENT_DATE) AND type = 'expense' THEN total END), 0) AS expense_this_month,
-    COALESCE(SUM(CASE WHEN month = date_trunc('month', CURRENT_DATE) - INTERVAL '1 month' AND type = 'income' THEN total END), 0) AS income_last_month,
-    COALESCE(SUM(CASE WHEN month = date_trunc('month', CURRENT_DATE) - INTERVAL '1 month' AND type = 'expense' THEN total END), 0) AS expense_last_month
-FROM monthly
-      `,
+      `WITH monthly AS (
+                SELECT
+                    date_trunc('month', transaction_date) AS month,
+                    type,
+                    SUM(amount) AS total
+                FROM transactions
+                WHERE user_id = $1
+                  AND transaction_date >= date_trunc('month', CURRENT_DATE) - INTERVAL '1 month'
+                GROUP BY 1, 2
+            )
+            SELECT
+                COALESCE(SUM(CASE WHEN month = date_trunc('month', CURRENT_DATE) AND type = 'income' THEN total END), 0) AS income_this_month,
+                COALESCE(SUM(CASE WHEN month = date_trunc('month', CURRENT_DATE) AND type = 'expense' THEN total END), 0) AS expense_this_month,
+                COALESCE(SUM(CASE WHEN month = date_trunc('month', CURRENT_DATE) - INTERVAL '1 month' AND type = 'income' THEN total END), 0) AS income_last_month,
+                COALESCE(SUM(CASE WHEN month = date_trunc('month', CURRENT_DATE) - INTERVAL '1 month' AND type = 'expense' THEN total END), 0) AS expense_last_month
+            FROM monthly`,
       [req.userId],
     );
-    const rows = result.rows[0];
-    const income_this_month = parseFloat(rows.income_this_month);
-    const expense_this_month = parseFloat(rows.expense_this_month);
-    const income_last_month = parseFloat(rows.income_last_month);
-    const expense_last_month = parseFloat(rows.expense_last_month);
-    const balance_this_month = income_this_month - expense_this_month;
-    const savings_this_month =
-      balance_this_month > 0
-        ? (balance_this_month / income_this_month) * 100
-        : 0;
+
+    // Fallback to empty values if no transactions exist for the specified periods
+    const row = result.rows[0] || {
+      income_this_month: "0",
+      expense_this_month: "0",
+      income_last_month: "0",
+      expense_last_month: "0",
+    };
+
+    const incomeThisMonth = parseFloat(row.income_this_month);
+    const expenseThisMonth = parseFloat(row.expense_this_month);
+    const incomeLastMonth = parseFloat(row.income_last_month);
+    const expenseLastMonth = parseFloat(row.expense_last_month);
+
+    const balance = incomeThisMonth - expenseThisMonth;
+    const savingsRate =
+      incomeThisMonth > 0 ? (balance / incomeThisMonth) * 100 : 0;
+
     res.json({
-      income_this_month,
-      expense_this_month,
-      balance_this_month,
-      savings_this_month,
-      income_change: pctChange(income_this_month, income_last_month),
-      expense_change: pctChange(expense_this_month, expense_last_month),
+      incomeThisMonth,
+      expenseThisMonth,
+      balance,
+      savingsRate,
+      incomeDelta: pctChange(incomeThisMonth, incomeLastMonth),
+      expenseDelta: pctChange(expenseThisMonth, expenseLastMonth),
     });
   } catch (error) {
     console.error("Error fetching budget summary:", error);
