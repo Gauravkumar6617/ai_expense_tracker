@@ -43,6 +43,21 @@ export const getInSight = async (req, res) => {
   }
 };
 
+// Return all insights for user (most recent first)
+export const getInsights = async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT * FROM ai_insight WHERE user_id = $1 ORDER BY created_at DESC`,
+      [req.userId],
+    );
+
+    return res.json(result.rows);
+  } catch (error) {
+    console.error("Error fetching insights:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
 const buildMonthlyInsight = async (userId) => {
   const data = await pool.query(
     `WITH current_month AS (

@@ -201,7 +201,51 @@ Return ONLY valid JSON (no markdown):
     return JSON.parse(cleaned);
   } catch (error) {
     console.error("Gemini API error (analyze transactions):", error);
-    throw new Error("Failed to analyze transactions.");
+
+    // Retry once after a short delay for transient errors
+    try {
+      await new Promise((r) => setTimeout(r, 1000));
+      const retryResp = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+      });
+      const cleanedRetry = stripMarkdown(retryResp.text);
+      return JSON.parse(cleanedRetry);
+    } catch (retryError) {
+      console.error("Gemini retry failed (analyze transactions):", retryError);
+
+      // Deterministic local fallback so the endpoint still returns helpful data
+      try {
+        const total = transactions.length;
+        const sums = transactions.reduce(
+          (acc, t) => {
+            const amt = parseFloat(t.amount) || 0;
+            if (t.type === "expense") acc.expense += amt;
+            if (t.type === "income") acc.income += amt;
+            acc.byCategory[t.category_name || "Uncategorized"] =
+              (acc.byCategory[t.category_name || "Uncategorized"] || 0) + amt;
+            return acc;
+          },
+          { income: 0, expense: 0, byCategory: {} },
+        );
+
+        const topCategory = Object.entries(sums.byCategory).sort(
+          (a, b) => b[1] - a[1],
+        )[0] || [null, 0];
+        const topCatName = topCategory[0];
+        const topCatAmount = topCategory[1] || 0;
+
+        const insight = `Analyzed ${total} transactions: total income ${currency} ${sums.income.toFixed(2)}, total expenses ${currency} ${sums.expense.toFixed(2)}.`;
+        const highlight = topCatName
+          ? `Top spending: ${topCatName}`
+          : "No categorized spending";
+
+        return { insight, highlight };
+      } catch (fallbackError) {
+        console.error("Fallback analyze error:", fallbackError);
+        throw new Error("Failed to analyze transactions.");
+      }
+    }
   }
 };
 
