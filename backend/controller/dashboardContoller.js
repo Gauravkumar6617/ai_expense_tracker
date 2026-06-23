@@ -1,5 +1,4 @@
 import pool from "../db.js";
-import { getCategory } from "./categoryController.js";
 
 const pctChange = (current, previous) => {
   if (previous === 0) {
@@ -8,17 +7,17 @@ const pctChange = (current, previous) => {
   return ((current - previous) / previous) * 100;
 };
 
-const getBudgetSummary = async (req, res) => {
+export const getBudgetSummary = async (req, res) => {
   try {
     const result = await pool.query(
       `WITH monthly AS (
                 SELECT
-                    date_trunc('month', transaction_date) AS month,
+                    date_trunc('month', transactions_date) AS month,
                     type,
                     SUM(amount) AS total
                 FROM transactions
                 WHERE user_id = $1
-                  AND transaction_date >= date_trunc('month', CURRENT_DATE) - INTERVAL '1 month'
+                  AND transactions_date >= date_trunc('month', CURRENT_DATE) - INTERVAL '1 month'
                 GROUP BY 1, 2
             )
             SELECT
@@ -61,7 +60,7 @@ const getBudgetSummary = async (req, res) => {
   }
 };
 
-const getCategoryBreakdown = async (req, res) => {
+export const getCategoryBreakdown = async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT
@@ -72,10 +71,10 @@ const getCategoryBreakdown = async (req, res) => {
                 SUM(t.amount) AS total,
                 COUNT(t.id) AS transaction_count
             FROM transactions t
-            JOIN categories c ON c.id = t.category_id
+            JOIN category c ON c.id = t.category_id
             WHERE t.user_id = $1
               AND t.type = 'expense'
-              AND t.transaction_date >= date_trunc('month', CURRENT_DATE)
+              AND t.transactions_date >= date_trunc('month', CURRENT_DATE)
             GROUP BY c.id
             ORDER BY total DESC`,
       [req.userId], // Fixed: Placed correctly inside the query parentheses
@@ -89,18 +88,16 @@ const getCategoryBreakdown = async (req, res) => {
   }
 };
 
-export default getCategoryBreakdown;
-
 export const getMonthlySummary = async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT
-    to_char(date_trunc('month', transaction_date), 'YYYY-MM') AS month,
+    to_char(date_trunc('month', transactions_date), 'YYYY-MM') AS month,
     SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) AS income,
     SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) AS expense
 FROM transactions
 WHERE user_id = $1
-  AND transaction_date >= date_trunc('month', CURRENT_DATE) - INTERVAL '5 months'
+  AND transactions_date >= date_trunc('month', CURRENT_DATE) - INTERVAL '5 months'
 GROUP BY 1
 ORDER BY 1`,
       [req.userId],

@@ -44,7 +44,10 @@ export const Register = async (req, res) => {
     }
     await client.query("COMMIT");
     const token = signToken(user.id);
-    return res.status(201).json({ user, token });
+    // normalize field name to `currency` for frontend
+    const normalizedUser = { ...user, currency: user.curreny };
+    delete normalizedUser.curreny;
+    return res.status(201).json({ user: normalizedUser, token });
   } catch (error) {
     await client.query("ROLLBACK");
     console.log("error while regsitering the account", error);
@@ -78,7 +81,7 @@ export const Login = async (req, res) => {
       user: {
         name: user.name,
         email: user.email,
-        curreny: user.curreny,
+        currency: user.curreny,
         created_at: user.created_at,
       },
       token,
@@ -104,7 +107,9 @@ export const getMe = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
     const user = userResult.rows[0];
-    return res.status(200).json({ user });
+    const normalizedUser = { ...user, currency: user.curreny };
+    delete normalizedUser.curreny;
+    return res.status(200).json({ user: normalizedUser });
   } catch (error) {
     console.log("error while fetching user data", error);
     res.status(501).json({ message: "Something went wrong" });

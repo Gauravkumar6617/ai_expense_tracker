@@ -1,6 +1,6 @@
 import pool from "../db.js";
 import { analyzeBudgetList } from "../utils/gemini_ai.js";
-export const getbudgets = async (req, res) => {
+export const getBudgets = async (req, res) => {
   const user_id = req.userId;
 
   try {
@@ -17,14 +17,14 @@ SELECT
     c.color AS category_color,
     COALESCE(SUM(t.amount), 0) AS spent
 FROM budgets b
-JOIN categories c ON c.id = b.category_id
+  JOIN category c ON c.id = b.category_id
 LEFT JOIN transactions t 
     ON t.category_id = b.category_id
     AND t.user_id = b.user_id
     AND t.type = 'expense'
     AND (
-        (b.period = 'monthly' AND t.transaction_date >= date_trunc('month', CURRENT_DATE))
-        OR (b.period = 'weekly' AND t.transaction_date >= date_trunc('week', CURRENT_DATE))
+      (b.period = 'monthly' AND t.transactions_date >= date_trunc('month', CURRENT_DATE))
+      OR (b.period = 'weekly' AND t.transactions_date >= date_trunc('week', CURRENT_DATE))
     )
 WHERE b.user_id = $1
 GROUP BY b.id, c.name, c.icon, c.color
@@ -132,7 +132,7 @@ RETURNING *
   }
 };
 
-export const analyzeBudgets = async (req, res) => {
+export const analyzeBudget = async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT
@@ -142,14 +142,14 @@ export const analyzeBudgets = async (req, res) => {
                 c.name AS category_name,
                 COALESCE(SUM(t.amount), 0) AS spent
             FROM budgets b
-            JOIN categories c ON c.id = b.category_id
+            JOIN category c ON c.id = b.category_id
             LEFT JOIN transactions t
                 ON t.category_id = b.category_id
                 AND t.user_id = b.user_id
                 AND t.type = 'expense'
                 AND (
-                    (b.period = 'monthly' AND t.transaction_date >= date_trunc('month', CURRENT_DATE))
-                    OR (b.period = 'weekly' AND t.transaction_date >= date_trunc('week', CURRENT_DATE))
+                    (b.period = 'monthly' AND t.transactions_date >= date_trunc('month', CURRENT_DATE))
+                    OR (b.period = 'weekly' AND t.transactions_date >= date_trunc('week', CURRENT_DATE))
                 )
             WHERE b.user_id = $1
             GROUP BY b.id, c.name`,
@@ -161,10 +161,10 @@ export const analyzeBudgets = async (req, res) => {
     }
 
     const userRes = await pool.query(
-      "SELECT currency FROM users WHERE id = $1",
+      "SELECT curreny FROM users WHERE id = $1",
       [req.userId],
     );
-    const currency = userRes.rows[0]?.currency || "USD";
+    const currency = userRes.rows[0]?.curreny || "USD";
 
     const data = await analyzeBudgetList({
       budgets: result.rows,
@@ -175,5 +175,21 @@ export const analyzeBudgets = async (req, res) => {
   } catch (error) {
     console.error("AnalyzeBudgets error:", error);
     res.status(500).json({ message: error.message || "Server error" });
+  }
+};
+
+export const getBudgetById = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query(
+      "SELECT * FROM budgets WHERE id = $1 AND user_id = $2",
+      [id, req.userId],
+    );
+    if (result.rows.length === 0)
+      return res.status(404).json({ error: "Budget not found" });
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 };
