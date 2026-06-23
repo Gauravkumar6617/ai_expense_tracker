@@ -8,13 +8,13 @@ const signToken = (userId) => {
 };
 
 export const Register = async (req, res) => {
-  const { name, email, hash_password, curreny = "USD" } = req.body;
-  if (!name || !email || !hash_password) {
+  const { name, email, password, currency = "USD" } = req.body;
+  if (!name || !email || !password) {
     return res
       .status(400)
       .json({ message: "Name,Email and Password are required" });
   }
-  if (hash_password.length < 6) {
+  if (password.length < 6) {
     return res.status(400).json({ message: "Minimun password length is 6" });
   }
 
@@ -29,10 +29,10 @@ export const Register = async (req, res) => {
     }
     await client.query("BEGIN");
     const salt = await bcrypt.genSalt(10);
-    const hashed_password = await bcrypt.hash(hash_password, salt);
+    const hashed_password = await bcrypt.hash(password, salt);
     const userResult = await client.query(
       "INSERT INTO users (name, email, hash_password, curreny) VALUES ($1, $2, $3, $4) RETURNING id,name,email,curreny,created_at",
-      [name, email, hashed_password, curreny],
+      [name, email, hashed_password, currency],
     );
     const user = userResult.rows[0];
 
@@ -58,8 +58,8 @@ export const Register = async (req, res) => {
 };
 
 export const Login = async (req, res) => {
-  const { email, hash_password } = req.body;
-  if (!email || !hash_password) {
+  const { email, password } = req.body;
+  if (!email || !password) {
     return res.status(400).json({ message: "Email and Password are required" });
   }
   const client = await pool.connect();
@@ -72,7 +72,7 @@ export const Login = async (req, res) => {
       return res.status(400).json({ message: "Invalid email or password" });
     }
     const user = userResult.rows[0];
-    const isMatch = await bcrypt.compare(hash_password, user.hash_password);
+    const isMatch = await bcrypt.compare(password, user.hash_password);
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid email or password" });
     }

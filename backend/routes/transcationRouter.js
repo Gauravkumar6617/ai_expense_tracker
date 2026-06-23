@@ -12,7 +12,7 @@ const router = express.Router();
 router.use(protect);
 router.get("/", getTransactions);
 router.post("/", createTranscation);
-router.get("/analyze", analyzeTransactions);
+router.post("/analyze", analyzeTransactions);
 router.put("/:id", updateTranscation);
 router.get("/:id", getTranscatioById);
 

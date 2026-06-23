@@ -352,11 +352,52 @@
             "name": "authorization",
             "in": "header",
             "type": "string"
+          },
+          {
+            "name": "startDate",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "endDate",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "categoryId",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "type": "string"
           }
         ],
         "responses": {
+          "200": {
+            "description": "OK"
+          },
           "401": {
             "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
           }
         }
       },
@@ -367,11 +408,100 @@
             "name": "authorization",
             "in": "header",
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "category_id": {
+                  "example": "any"
+                },
+                "categoryId": {
+                  "example": "any"
+                },
+                "amount": {
+                  "example": "any"
+                },
+                "type": {
+                  "example": "any"
+                },
+                "description": {
+                  "example": "any"
+                },
+                "notes": {
+                  "example": "any"
+                },
+                "transactions_date": {
+                  "example": "any"
+                },
+                "transactionDate": {
+                  "example": "any"
+                },
+                "transactionsDate": {
+                  "example": "any"
+                }
+              }
+            }
           }
         ],
         "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
           "401": {
             "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/transactions/analyze": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "transactionIds": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
           }
         }
       }
@@ -390,11 +520,56 @@
             "name": "authorization",
             "in": "header",
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "category_id": {
+                  "example": "any"
+                },
+                "categoryId": {
+                  "example": "any"
+                },
+                "amount": {
+                  "example": "any"
+                },
+                "type": {
+                  "example": "any"
+                },
+                "notes": {
+                  "example": "any"
+                },
+                "description": {
+                  "example": "any"
+                },
+                "transactions_date": {
+                  "example": "any"
+                },
+                "transactionsDate": {
+                  "example": "any"
+                },
+                "transactionDate": {
+                  "example": "any"
+                }
+              }
+            }
           }
         ],
         "responses": {
+          "200": {
+            "description": "OK"
+          },
           "401": {
             "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
           }
         }
       },
@@ -414,8 +589,188 @@
           }
         ],
         "responses": {
+          "200": {
+            "description": "OK"
+          },
           "401": {
             "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/budgets/": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      },
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "category_id": {
+                  "example": "any"
+                },
+                "amount": {
+                  "example": "any"
+                },
+                "period": {
+                  "example": "any"
+                },
+                "start_date": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/budgets/{id}": {
+      "put": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "period": {
+                  "example": "any"
+                },
+                "amount": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      },
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/budgets/analyze": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
           }
         }
       }

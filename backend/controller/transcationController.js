@@ -80,8 +80,15 @@ export const getTransactions = async (req, res) => {
 };
 
 export const createTranscation = async (req, res) => {
-  const { category_id, amount, type, description, notes, transactions_date } =
-    req.body;
+  // Accept both frontend (camelCase) and backend (snake_case) field names
+  const body = req.body || {};
+  const category_id = body.category_id || body.categoryId || null;
+  const amount = body.amount;
+  const type = body.type;
+  const description = body.description || null;
+  const notes = body.notes || null;
+  const transactions_date =
+    body.transactions_date || body.transactionDate || body.transactionsDate;
 
   if (!amount || !type || !transactions_date) {
     return res
@@ -147,8 +154,18 @@ export const getTranscatioById = async (req, res) => {
 
 export const updateTranscation = async (req, res) => {
   const { id } = req.params;
-  const { category_id, amount, type, notes, description, transactions_date } =
-    req.body;
+  // accept both camelCase and snake_case from frontend
+  const body = req.body || {};
+  const category_id = body.category_id || body.categoryId || null;
+  const amount = body.amount || null;
+  const type = body.type || null;
+  const notes = body.notes || null;
+  const description = body.description || null;
+  const transactions_date =
+    body.transactions_date ||
+    body.transactionsDate ||
+    body.transactionDate ||
+    null;
 
   try {
     const result = await pool.query(
@@ -187,6 +204,15 @@ export const updateTranscation = async (req, res) => {
 
 export const analyzeTransactions = async (req, res) => {
   const { transactionIds } = req.body || {};
+  // If Gemini API key is not configured, return a clear error rather than calling the AI client
+  if (!process.env.GEMINI_API_KEY) {
+    return res
+      .status(503)
+      .json({
+        message:
+          "GEMINI_API_KEY not set. AI analysis is unavailable. Set GEMINI_API_KEY in .env to enable this feature.",
+      });
+  }
   if (!Array.isArray(transactionIds) || transactionIds.length === 0) {
     return res
       .status(400)
