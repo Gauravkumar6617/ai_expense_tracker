@@ -38,6 +38,7 @@ app.use(
   "/api/dashboard",
   (await import("./routes/dashboardRouter.js")).default,
 );
+app.use("/api/insights", (await import("./routes/inSightRoutes.js")).default);
 
 app.listen(port, () => {
   console.log(`App listening on port ${port}`);

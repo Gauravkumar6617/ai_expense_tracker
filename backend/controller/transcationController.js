@@ -1,5 +1,5 @@
 import pool from "../db.js";
-
+import { analyzeTransactionList } from "../utils/gemini_ai.js";
 export const getTransactions = async (req, res) => {
   const {
     startDate,
@@ -99,11 +99,9 @@ export const createTranscation = async (req, res) => {
     req.status(201).json(result.rows[0]);
   } catch (error) {
     console.log("error while creating transcation", error);
-    return res
-      .status(500)
-      .json({
-        message: "Error while cretaing a transcation.Please try again later.",
-      });
+    return res.status(500).json({
+      message: "Error while cretaing a transcation.Please try again later.",
+    });
   }
 };
 
@@ -128,11 +126,9 @@ export const getTranscatioById = async (req, res) => {
     return res.json(result.rows[0]);
   } catch (error) {
     console.log("error while creating transcation", error);
-    return res
-      .status(500)
-      .json({
-        message: "Error while cretaing a transcation.Please try again later.",
-      });
+    return res.status(500).json({
+      message: "Error while cretaing a transcation.Please try again later.",
+    });
   }
 };
 
@@ -162,10 +158,47 @@ export const updateTranscation = async (req, res) => {
     return res.json(result.rows[0]);
   } catch {
     console.log("error while updating transcation", error);
-    return res
-      .status(500)
-      .json({
-        message: "Error while updating a transcation.Please try again later.",
-      });
+    return res.status(500).json({
+      message: "Error while updating a transcation.Please try again later.",
+    });
+  }
+};
+
+export const analyzeTransactions = async (req, res) => {
+  // Note: transactionIds would typically be destructured here, e.g., const { transactionIds } = req.body;
+  const ids = transactionIds.slice(0, 50);
+
+  try {
+    const result = await pool.query(
+      `SELECT t.id, t.amount, t.type, t.description, t.transaction_date,
+                    c.name AS category_name
+             FROM transactions t
+             LEFT JOIN categories c ON c.id = t.category_id
+             WHERE t.user_id = $1 AND t.id = ANY($2::int[])
+             ORDER BY t.transaction_date DESC`,
+      [req.userId, ids],
+    );
+
+    if (result.rows.length === 0) {
+      return res
+        .status(404)
+        .json({ message: "No transactions found for analysis" });
+    }
+
+    const userRes = await pool.query(
+      "SELECT currency FROM users WHERE id = $1",
+      [req.userId],
+    );
+    const currency = userRes.rows[0]?.currency || "USD";
+
+    const analysis = await analyzeTransactionList({
+      transactions: result.rows,
+      currency,
+    });
+
+    res.json(analysis);
+  } catch (error) {
+    console.error("AnalyzeTransactions error:", error);
+    res.status(500).json({ message: error.message || "Server error" });
   }
 };
